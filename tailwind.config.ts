@@ -61,7 +61,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+                medconnect: {
+                    primary: '#16a085',
+                    secondary: '#1abc9c',
+                    light: '#e8f8f5',
+                    dark: '#333333',
+                    gray: '#8E9196'
+                }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',

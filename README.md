@@ -1,73 +1,130 @@
-# Welcome to your Lovable project
 
-## Project info
+# MedConnect - Healthcare Portal
 
-**URL**: https://lovable.dev/projects/dc65f31d-dab5-4e3d-8386-9f8b7e375f11
+MedConnect is a comprehensive healthcare management system that connects patients and doctors on a single platform. This web application provides role-based access with different interfaces for patients and doctors.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+### Patient Features
+- View prescriptions
+- Set medication reminders
+- Access lab reports
+- Manage doctors
 
-**Use Lovable**
+### Doctor Features
+- Write prescriptions
+- Set appointment reminders
+- View patient test results
+- Manage patients
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/dc65f31d-dab5-4e3d-8386-9f8b7e375f11) and start prompting.
+## Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+### Frontend
+- React
+- TypeScript
+- Tailwind CSS
+- React Router
+- Shadcn UI Components
 
-**Use your preferred IDE**
+### Backend (Implementation Guide)
+- Node.js
+- Express
+- MongoDB
+- JWT Authentication
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Getting Started
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### Prerequisites
+- Node.js (v14 or higher)
+- npm or yarn
 
-Follow these steps:
+### Installation and Setup
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. Clone the repository
+```bash
+git clone <repository-url>
+cd medconnect
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. Install dependencies
+```bash
+npm install
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+3. Start the development server
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+4. Open your browser and navigate to `http://localhost:8080`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Backend Implementation
 
-**Use GitHub Codespaces**
+This repository includes a frontend implementation. For the backend implementation, refer to the `BACKEND_IMPLEMENTATION.md` file which provides detailed instructions on how to set up the Node.js, Express, and MongoDB backend.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Demo Credentials
 
-## What technologies are used for this project?
+For demonstration purposes, you can use the following credentials:
 
-This project is built with:
+### Patient Access
+- Email: patient@example.com
+- Password: password123
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Doctor Access
+- Email: doctor@example.com
+- Password: password123
 
-## How can I deploy this project?
+## Project Structure
 
-Simply open [Lovable](https://lovable.dev/projects/dc65f31d-dab5-4e3d-8386-9f8b7e375f11) and click on Share -> Publish.
+```
+medconnect/
+├── public/                  # Static files
+├── src/                     # Source files
+│   ├── components/          # Reusable components
+│   │   ├── auth/            # Authentication components
+│   │   ├── dashboard/       # Dashboard components
+│   │   ├── doctor/          # Doctor-specific components
+│   │   ├── layout/          # Layout components
+│   │   ├── patient/         # Patient-specific components
+│   │   └── ui/              # UI components
+│   ├── hooks/               # Custom React hooks
+│   ├── lib/                 # Utility functions
+│   ├── pages/               # Page components
+│   └── App.tsx              # Main app component
+├── BACKEND_IMPLEMENTATION.md # Backend implementation guide
+└── README.md                # Project documentation
+```
 
-## Can I connect a custom domain to my Lovable project?
+## Extending the Project
 
-Yes, you can!
+### Adding New Features
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+1. **Create New Components**: 
+   - Add new components to the appropriate directory under `src/components/`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+2. **Add Routes**:
+   - Update routes in `src/App.tsx`
+
+3. **Backend Integration**:
+   - Follow the implementation guide in `BACKEND_IMPLEMENTATION.md`
+   - Update API service functions to connect to your backend
+
+### Authentication Flow
+
+The application uses localStorage for authentication in the demo. For a production application, you should:
+
+1. Implement JWT-based authentication with the backend
+2. Add token refresh mechanisms
+3. Implement proper security measures
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License.
