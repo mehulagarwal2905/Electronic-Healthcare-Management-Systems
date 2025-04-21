@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -73,11 +72,27 @@ export default function DoctorDashboard() {
       case "prescriptions":
         return <DoctorPrescriptions />;
       case "reminders":
-        return <div className="p-4 bg-white rounded-lg shadow"><h2 className="text-xl font-bold mb-4">Appointment Reminders</h2><p>Set up appointment reminders for your patients.</p></div>;
+        return (
+          <div className="p-4 bg-white rounded-lg shadow">
+            <h2 className="text-xl font-bold mb-4">Appointment Reminders</h2>
+            <p>Set up appointment reminders for your patients.</p>
+          </div>
+        );
       case "lab-reports":
-        return <div className="p-4 bg-white rounded-lg shadow"><h2 className="text-xl font-bold mb-4">Patient Lab Reports</h2><p>View and manage lab reports for your patients.</p></div>;
+        return (
+          <div className="p-4 bg-white rounded-lg shadow">
+            <h2 className="text-xl font-bold mb-4">Patient Lab Reports</h2>
+            <p>View and manage lab reports for your patients.</p>
+          </div>
+        );
       case "my-patients":
-        return <div className="p-4 bg-white rounded-lg shadow"><h2 className="text-xl font-bold mb-4">My Patients</h2><p>View and manage your patient list.</p></div>;
+        const { PatientTable } = require("@/components/doctor/PatientTable");
+        return (
+          <div className="p-4 bg-white rounded-lg shadow">
+            <h2 className="text-xl font-bold mb-4">My Patients</h2>
+            <PatientTable />
+          </div>
+        );
       default:
         return (
           <>
