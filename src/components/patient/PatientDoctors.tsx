@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Doctor } from "lucide-react";
+import { UserRound } from "lucide-react";
 
 export function PatientDoctors() {
   // Using MongoDB data provided earlier
@@ -41,7 +41,7 @@ export function PatientDoctors() {
       
       {doctors.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow text-center">
-          <Doctor className="h-12 w-12 text-gray-400 mb-4" />
+          <UserRound className="h-12 w-12 text-gray-400 mb-4" />
           <p>You haven't been assigned to any doctors yet.</p>
         </div>
       ) : (
