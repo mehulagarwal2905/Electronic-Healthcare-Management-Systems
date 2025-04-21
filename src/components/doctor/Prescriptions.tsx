@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -50,7 +50,15 @@ export function DoctorPrescriptions() {
     }
   ];
 
-  const [recentPrescriptions, setRecentPrescriptions] = useState<Prescription[]>(samplePrescriptions);
+  const [recentPrescriptions, setRecentPrescriptions] = useState<Prescription[]>(() => {
+    const savedPrescriptions = localStorage.getItem("doctorPrescriptions");
+    return savedPrescriptions ? JSON.parse(savedPrescriptions) : samplePrescriptions;
+  });
+
+  // Save prescriptions to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("doctorPrescriptions", JSON.stringify(recentPrescriptions));
+  }, [recentPrescriptions]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,18 +81,17 @@ export function DoctorPrescriptions() {
         description: "The prescription has been successfully created",
       });
       // Add to top of recentPrescriptions list
-      setRecentPrescriptions(prev => ([
-        {
-          id: Number(Date.now()),
-          patient: patientName,
-          medication,
-          dosage,
-          frequency,
-          issuedDate: new Date().toISOString().split('T')[0],
-          duration,
-        },
-        ...prev,
-      ]));
+      const newPrescription = {
+        id: Number(Date.now()),
+        patient: patientName,
+        medication,
+        dosage,
+        frequency,
+        issuedDate: new Date().toISOString().split('T')[0],
+        duration,
+      };
+      
+      setRecentPrescriptions(prev => ([newPrescription, ...prev]));
       setPatientName("");
       setMedication("");
       setDosage("");

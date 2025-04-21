@@ -1,10 +1,12 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { FileText, Bell, FileText as Lab, Users } from "lucide-react";
 import { PatientPrescriptions } from "@/components/patient/Prescriptions";
+import { PatientReminders } from "@/components/patient/PatientReminders";
+import { PatientLabReports } from "@/components/patient/PatientLabReports";
+import { PatientDoctors } from "@/components/patient/PatientDoctors";
 
 export default function PatientDashboard() {
   const [user, setUser] = useState<{ email: string; role: string } | null>(null);
@@ -12,7 +14,6 @@ export default function PatientDashboard() {
   const { section } = useParams();
   
   useEffect(() => {
-    // Check if user is logged in and is a patient
     const userStr = localStorage.getItem("user");
     if (!userStr) {
       navigate("/login");
@@ -67,17 +68,16 @@ export default function PatientDashboard() {
     return null; // or a loading spinner
   }
 
-  // Render the appropriate section based on the URL
   const renderSection = () => {
     switch (section) {
       case "prescriptions":
         return <PatientPrescriptions />;
       case "reminders":
-        return <div className="p-4 bg-white rounded-lg shadow"><h2 className="text-xl font-bold mb-4">Medication Reminders</h2><p>You have no medication reminders set up. Create your first reminder to get started.</p></div>;
+        return <PatientReminders />;
       case "lab-reports":
-        return <div className="p-4 bg-white rounded-lg shadow"><h2 className="text-xl font-bold mb-4">Lab Reports</h2><p>Your recent lab reports will appear here.</p></div>;
+        return <PatientLabReports />;
       case "my-doctors":
-        return <div className="p-4 bg-white rounded-lg shadow"><h2 className="text-xl font-bold mb-4">My Doctors</h2><p>Your care team will appear here.</p></div>;
+        return <PatientDoctors />;
       default:
         return (
           <>
