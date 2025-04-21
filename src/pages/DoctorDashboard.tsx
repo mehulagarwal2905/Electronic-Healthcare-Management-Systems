@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -6,6 +5,8 @@ import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { FileText, Bell, FileText as Lab, Users } from "lucide-react";
 import { DoctorPrescriptions } from "@/components/doctor/Prescriptions";
 import { PatientTable } from "@/components/doctor/PatientTable";
+import { DoctorLabReports } from "@/components/doctor/DoctorLabReports";
+import { DoctorReminders } from "@/components/doctor/DoctorReminders";
 
 export default function DoctorDashboard() {
   const [user, setUser] = useState<{ email: string; role: string } | null>(null);
@@ -68,25 +69,14 @@ export default function DoctorDashboard() {
     return null; // or a loading spinner
   }
 
-  // Render the appropriate section based on the URL
   const renderSection = () => {
     switch (section) {
       case "prescriptions":
         return <DoctorPrescriptions />;
       case "reminders":
-        return (
-          <div className="p-4 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-bold mb-4">Appointment Reminders</h2>
-            <p>Set up appointment reminders for your patients.</p>
-          </div>
-        );
+        return <DoctorReminders />;
       case "lab-reports":
-        return (
-          <div className="p-4 bg-white rounded-lg shadow">
-            <h2 className="text-xl font-bold mb-4">Patient Lab Reports</h2>
-            <p>View and manage lab reports for your patients.</p>
-          </div>
-        );
+        return <DoctorLabReports />;
       case "my-patients":
         return (
           <div className="p-4 bg-white rounded-lg shadow">

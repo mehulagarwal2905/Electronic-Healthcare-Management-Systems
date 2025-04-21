@@ -5,29 +5,31 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
+interface Prescription {
+  id: number;
+  patient: string;
+  medication: string;
+  dosage: string;
+  frequency: string;
+  issuedDate: string;
+  duration: string;
+}
+
 export function DoctorPrescriptions() {
-  const [selectedPatient, setSelectedPatient] = useState("");
+  const [patientName, setPatientName] = useState("");
   const [medication, setMedication] = useState("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
   const [duration, setDuration] = useState("");
   const [instructions, setInstructions] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   const { toast } = useToast();
-  
-  // In a real app, fetch this from the backend
-  const patients = [
-    { id: "1", name: "Alice Johnson" },
-    { id: "2", name: "Bob Williams" },
-    { id: "3", name: "Carol Davis" }
-  ];
-  
-  // In a real app, fetch these from the backend
-  const recentPrescriptions = [
+
+  // Demo/preset prescriptions (could be mapped from Mongo sample, here minimal for brevity)
+  const samplePrescriptions: Prescription[] = [
     {
       id: 1,
       patient: "Alice Johnson",
@@ -35,7 +37,7 @@ export function DoctorPrescriptions() {
       dosage: "500mg",
       frequency: "3 times daily",
       issuedDate: "2025-04-10",
-      duration: "10 days"
+      duration: "10 days",
     },
     {
       id: 2,
@@ -44,14 +46,16 @@ export function DoctorPrescriptions() {
       dosage: "10mg",
       frequency: "Once daily",
       issuedDate: "2025-04-15",
-      duration: "30 days"
+      duration: "30 days",
     }
   ];
 
+  const [recentPrescriptions, setRecentPrescriptions] = useState<Prescription[]>(samplePrescriptions);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!selectedPatient || !medication || !dosage || !frequency || !duration) {
+
+    if (!patientName || !medication || !dosage || !frequency || !duration) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
@@ -59,31 +63,41 @@ export function DoctorPrescriptions() {
       });
       return;
     }
-    
+
     setIsSubmitting(true);
-    
-    // Simulate API call - in a real app, send to backend
+
     setTimeout(() => {
       setIsSubmitting(false);
       toast({
         title: "Prescription created",
         description: "The prescription has been successfully created",
       });
-      
-      // Reset form
-      setSelectedPatient("");
+      // Add to top of recentPrescriptions list
+      setRecentPrescriptions(prev => ([
+        {
+          id: Number(Date.now()),
+          patient: patientName,
+          medication,
+          dosage,
+          frequency,
+          issuedDate: new Date().toISOString().split('T')[0],
+          duration,
+        },
+        ...prev,
+      ]));
+      setPatientName("");
       setMedication("");
       setDosage("");
       setFrequency("");
       setDuration("");
       setInstructions("");
-    }, 1500);
+    }, 1000);
   };
 
   return (
     <div className="grid gap-6">
       <h2 className="text-2xl font-bold">Write Prescriptions</h2>
-      
+
       <Card>
         <form onSubmit={handleSubmit}>
           <CardHeader>
@@ -91,21 +105,14 @@ export function DoctorPrescriptions() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="patient">Patient</Label>
-              <Select value={selectedPatient} onValueChange={setSelectedPatient}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a patient" />
-                </SelectTrigger>
-                <SelectContent>
-                  {patients.map((patient) => (
-                    <SelectItem key={patient.id} value={patient.id}>
-                      {patient.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="patient">Patient Name</Label>
+              <Input
+                id="patient"
+                value={patientName}
+                onChange={e => setPatientName(e.target.value)}
+                placeholder="Enter patient's full name"
+              />
             </div>
-            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="medication">Medication</Label>
@@ -126,7 +133,6 @@ export function DoctorPrescriptions() {
                 />
               </div>
             </div>
-            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="frequency">Frequency</Label>
@@ -147,7 +153,6 @@ export function DoctorPrescriptions() {
                 />
               </div>
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="instructions">Special Instructions</Label>
               <Textarea
@@ -160,8 +165,8 @@ export function DoctorPrescriptions() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="bg-medconnect-primary hover:bg-medconnect-secondary ml-auto"
               disabled={isSubmitting}
             >
@@ -170,7 +175,7 @@ export function DoctorPrescriptions() {
           </CardFooter>
         </form>
       </Card>
-      
+
       <h3 className="text-xl font-semibold mt-6">Recent Prescriptions</h3>
       <div className="grid gap-4">
         {recentPrescriptions.map((prescription) => (
@@ -203,3 +208,5 @@ export function DoctorPrescriptions() {
     </div>
   );
 }
+
+// NOTE FOR USER: This file is now getting large (over 200 lines). Please consider asking me to refactor it into smaller focused components for easier maintenance.
