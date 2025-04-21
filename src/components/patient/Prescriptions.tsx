@@ -1,9 +1,25 @@
 
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+interface PatientPrescription {
+  id: number;
+  medication: string;
+  dosage: string;
+  frequency: string;
+  issuedBy: string;
+  issuedDate: string;
+  expiryDate: string;
+  diagnosis: string;
+  patientEmail?: string;
+}
+
 export function PatientPrescriptions() {
-  // Using MongoDB data provided earlier
-  const prescriptions = [
+  const [prescriptions, setPrescriptions] = useState<PatientPrescription[]>([]);
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  // Initialize default prescriptions
+  const defaultPrescriptions: PatientPrescription[] = [
     {
       id: 1,
       medication: "Paracetamol, Cough Syrup",
@@ -45,6 +61,36 @@ export function PatientPrescriptions() {
       diagnosis: "Hypothyroidism"
     }
   ];
+
+  // Load prescriptions and user info
+  useEffect(() => {
+    // Get current user email
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const userData = JSON.parse(userStr);
+      setUserEmail(userData.email);
+    }
+
+    // Initialize patient prescriptions if they don't exist
+    const storedPrescriptions = localStorage.getItem("patientPrescriptions");
+    if (!storedPrescriptions) {
+      localStorage.setItem("patientPrescriptions", JSON.stringify(defaultPrescriptions));
+      setPrescriptions(defaultPrescriptions);
+    } else {
+      // Load all prescriptions
+      const allPrescriptions = JSON.parse(storedPrescriptions);
+      
+      // Filter prescriptions if we have a valid user email
+      if (userEmail) {
+        const filteredPrescriptions = allPrescriptions.filter(
+          (p: PatientPrescription) => !p.patientEmail || p.patientEmail === userEmail
+        );
+        setPrescriptions(filteredPrescriptions);
+      } else {
+        setPrescriptions(allPrescriptions);
+      }
+    }
+  }, [userEmail]);
 
   return (
     <div className="space-y-4">

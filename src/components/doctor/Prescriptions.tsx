@@ -10,19 +10,23 @@ import { useToast } from "@/hooks/use-toast";
 interface Prescription {
   id: number;
   patient: string;
+  patientEmail: string;
   medication: string;
   dosage: string;
   frequency: string;
   issuedDate: string;
   duration: string;
+  diagnosis?: string;
 }
 
 export function DoctorPrescriptions() {
   const [patientName, setPatientName] = useState("");
+  const [patientEmail, setPatientEmail] = useState("");
   const [medication, setMedication] = useState("");
   const [dosage, setDosage] = useState("");
   const [frequency, setFrequency] = useState("");
   const [duration, setDuration] = useState("");
+  const [diagnosis, setDiagnosis] = useState("");
   const [instructions, setInstructions] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -33,20 +37,24 @@ export function DoctorPrescriptions() {
     {
       id: 1,
       patient: "Alice Johnson",
+      patientEmail: "alice@example.com",
       medication: "Amoxicillin",
       dosage: "500mg",
       frequency: "3 times daily",
       issuedDate: "2025-04-10",
       duration: "10 days",
+      diagnosis: "Bacterial infection"
     },
     {
       id: 2,
       patient: "Bob Williams",
+      patientEmail: "bob@example.com",
       medication: "Lisinopril",
       dosage: "10mg",
       frequency: "Once daily",
       issuedDate: "2025-04-15",
       duration: "30 days",
+      diagnosis: "Hypertension"
     }
   ];
 
@@ -63,7 +71,7 @@ export function DoctorPrescriptions() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!patientName || !medication || !dosage || !frequency || !duration) {
+    if (!patientName || !patientEmail || !medication || !dosage || !frequency || !duration || !diagnosis) {
       toast({
         title: "Missing information",
         description: "Please fill in all required fields",
@@ -76,29 +84,87 @@ export function DoctorPrescriptions() {
 
     setTimeout(() => {
       setIsSubmitting(false);
-      toast({
-        title: "Prescription created",
-        description: "The prescription has been successfully created",
-      });
-      // Add to top of recentPrescriptions list
+      
+      // Create new prescription
       const newPrescription = {
         id: Number(Date.now()),
         patient: patientName,
+        patientEmail: patientEmail,
         medication,
         dosage,
         frequency,
         issuedDate: new Date().toISOString().split('T')[0],
         duration,
+        diagnosis
       };
       
-      setRecentPrescriptions(prev => ([newPrescription, ...prev]));
+      // Add to doctor's prescriptions
+      const updatedDoctorPrescriptions = [newPrescription, ...recentPrescriptions];
+      setRecentPrescriptions(updatedDoctorPrescriptions);
+      localStorage.setItem("doctorPrescriptions", JSON.stringify(updatedDoctorPrescriptions));
+      
+      // Also update patient prescriptions
+      updatePatientPrescriptions(newPrescription);
+      
+      toast({
+        title: "Prescription created",
+        description: "The prescription has been successfully created",
+      });
+      
+      // Reset form
       setPatientName("");
+      setPatientEmail("");
       setMedication("");
       setDosage("");
       setFrequency("");
       setDuration("");
+      setDiagnosis("");
       setInstructions("");
     }, 1000);
+  };
+
+  // Update patient prescriptions
+  const updatePatientPrescriptions = (prescription: Prescription) => {
+    try {
+      // Get logged in doctor's info
+      const doctorStr = localStorage.getItem("user");
+      if (!doctorStr) return;
+      
+      const doctor = JSON.parse(doctorStr);
+      
+      // Get existing patient prescriptions
+      const patientPrescriptionsStr = localStorage.getItem("patientPrescriptions") || "[]";
+      const patientPrescriptions = JSON.parse(patientPrescriptionsStr);
+      
+      // Create patient prescription format
+      const patientPrescription = {
+        id: prescription.id,
+        medication: prescription.medication,
+        dosage: prescription.dosage,
+        frequency: prescription.frequency,
+        issuedBy: `Dr. ${doctor.email.split('@')[0]}`, // Simple formatting for demo
+        issuedDate: prescription.issuedDate,
+        expiryDate: getExpiryDate(prescription.issuedDate, prescription.duration),
+        diagnosis: prescription.diagnosis,
+        patientEmail: prescription.patientEmail
+      };
+      
+      // Add to patient prescriptions
+      patientPrescriptions.unshift(patientPrescription);
+      
+      // Save updated patient prescriptions
+      localStorage.setItem("patientPrescriptions", JSON.stringify(patientPrescriptions));
+    } catch (error) {
+      console.error("Error updating patient prescriptions:", error);
+    }
+  };
+
+  // Helper to calculate expiry date
+  const getExpiryDate = (issuedDate: string, duration: string) => {
+    const durationDays = parseInt(duration.split(' ')[0]);
+    const date = new Date(issuedDate);
+    date.setDate(date.getDate() + durationDays);
+    return date.toISOString().split('T')[0];
   };
 
   return (
@@ -118,6 +184,25 @@ export function DoctorPrescriptions() {
                 value={patientName}
                 onChange={e => setPatientName(e.target.value)}
                 placeholder="Enter patient's full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="patientEmail">Patient Email</Label>
+              <Input
+                id="patientEmail"
+                type="email"
+                value={patientEmail}
+                onChange={e => setPatientEmail(e.target.value)}
+                placeholder="Enter patient's email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="diagnosis">Diagnosis</Label>
+              <Input
+                id="diagnosis"
+                value={diagnosis}
+                onChange={(e) => setDiagnosis(e.target.value)}
+                placeholder="Enter diagnosis"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -200,6 +285,14 @@ export function DoctorPrescriptions() {
                   <span className="text-sm font-medium">{prescription.patient}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Email:</span>
+                  <span className="text-sm font-medium">{prescription.patientEmail}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-500">Diagnosis:</span>
+                  <span className="text-sm font-medium">{prescription.diagnosis || "Not specified"}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Frequency:</span>
                   <span className="text-sm font-medium">{prescription.frequency}</span>
                 </div>
@@ -215,5 +308,3 @@ export function DoctorPrescriptions() {
     </div>
   );
 }
-
-// NOTE FOR USER: This file is now getting large (over 200 lines). Please consider asking me to refactor it into smaller focused components for easier maintenance.

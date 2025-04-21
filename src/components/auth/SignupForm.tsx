@@ -34,7 +34,32 @@ export function SignupForm() {
     setIsLoading(true);
     
     try {
-      // Simulate API call for registration - this would connect to your backend
+      // Get existing users or initialize empty array
+      const existingUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+      
+      // Check if email already exists
+      if (existingUsers.some((user: any) => user.email === email)) {
+        setIsLoading(false);
+        toast({
+          title: "Registration failed",
+          description: "Email already in use",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Add new user
+      const newUser = {
+        firstName,
+        lastName,
+        email,
+        password, // In a real app, this should be hashed
+        role
+      };
+      
+      existingUsers.push(newUser);
+      localStorage.setItem("registeredUsers", JSON.stringify(existingUsers));
+      
       setTimeout(() => {
         setIsLoading(false);
         toast({

@@ -23,25 +23,39 @@ export function LoginForm() {
     setIsLoading(true);
     
     try {
-      // Simulate API call for login - this would connect to your backend
+      // Simulate API call for login with basic validation
       setTimeout(() => {
         setIsLoading(false);
         
-        // For demo, use role to determine which dashboard to show
-        // In a real app, this would come from the backend
-        if (role === "patient") {
+        // Get registered users from localStorage
+        const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+        
+        // Check if user exists with matching credentials
+        const userExists = registeredUsers.find(
+          (user: any) => user.email === email && user.password === password && user.role === role
+        );
+        
+        if (userExists) {
           // Store user info in localStorage - in a real app, use secure tokens
           localStorage.setItem("user", JSON.stringify({ email, role }));
-          navigate("/patient-dashboard");
+          
+          if (role === "patient") {
+            navigate("/patient-dashboard");
+          } else {
+            navigate("/doctor-dashboard");
+          }
+          
+          toast({
+            title: "Login successful",
+            description: `Welcome back!`,
+          });
         } else {
-          localStorage.setItem("user", JSON.stringify({ email, role }));
-          navigate("/doctor-dashboard");
+          toast({
+            title: "Login failed",
+            description: "Invalid credentials or account doesn't exist",
+            variant: "destructive",
+          });
         }
-        
-        toast({
-          title: "Login successful",
-          description: `Welcome back!`,
-        });
       }, 1500);
     } catch (error) {
       setIsLoading(false);

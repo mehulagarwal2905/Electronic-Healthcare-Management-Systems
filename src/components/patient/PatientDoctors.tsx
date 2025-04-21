@@ -54,6 +54,10 @@ export function PatientDoctors() {
               <CardContent>
                 <div className="grid gap-1">
                   <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Doctor ID:</span>
+                    <span className="text-sm">{doctor.id}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Specialty:</span>
                     <span className="text-sm">{doctor.specialty}</span>
                   </div>
