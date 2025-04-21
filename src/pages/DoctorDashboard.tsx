@@ -1,9 +1,11 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { FileText, Bell, FileText as Lab, Users } from "lucide-react";
 import { DoctorPrescriptions } from "@/components/doctor/Prescriptions";
+import { PatientTable } from "@/components/doctor/PatientTable";
 
 export default function DoctorDashboard() {
   const [user, setUser] = useState<{ email: string; role: string } | null>(null);
@@ -86,7 +88,6 @@ export default function DoctorDashboard() {
           </div>
         );
       case "my-patients":
-        const { PatientTable } = require("@/components/doctor/PatientTable");
         return (
           <div className="p-4 bg-white rounded-lg shadow">
             <h2 className="text-xl font-bold mb-4">My Patients</h2>
