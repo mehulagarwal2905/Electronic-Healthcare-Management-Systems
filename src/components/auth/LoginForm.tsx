@@ -23,46 +23,53 @@ export function LoginForm() {
     setIsLoading(true);
     
     try {
-      // Simulate API call for login with basic validation
-      setTimeout(() => {
-        setIsLoading(false);
-        
-        // Get registered users from localStorage
-        const registeredUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
-        
-        // Check if user exists with matching credentials
-        const userExists = registeredUsers.find(
-          (user: any) => user.email === email && user.password === password && user.role === role
-        );
-        
-        if (userExists) {
-          // Store user info in localStorage - in a real app, use secure tokens
-          localStorage.setItem("user", JSON.stringify({ email, role }));
-          
-          if (role === "patient") {
-            navigate("/patient-dashboard");
-          } else {
-            navigate("/doctor-dashboard");
-          }
-          
-          toast({
-            title: "Login successful",
-            description: `Welcome back!`,
-          });
-        } else {
-          toast({
-            title: "Login failed",
-            description: "Invalid credentials or account doesn't exist",
-            variant: "destructive",
-          });
-        }
-      }, 1500);
-    } catch (error) {
+      // Call backend API for login
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+      
+      // Store token and user data
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify({
+        id: data._id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        role: data.role
+      }));
+      
+      setIsLoading(false);
+      
+      // Navigate based on user role
+      if (data.role === 'patient') {
+        navigate('/patient-dashboard');
+      } else {
+        navigate('/doctor-dashboard');
+      }
+      
+      toast({
+        title: 'Login successful',
+        description: `Welcome back, ${data.firstName}!`,
+      });
+    } catch (error: any) {
       setIsLoading(false);
       toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again",
-        variant: "destructive",
+        title: 'Login failed',
+        description: error.message || 'Please check your credentials and try again',
+        variant: 'destructive',
       });
     }
   };

@@ -1,69 +1,81 @@
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bell } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { format, parseISO, isAfter, isToday } from "date-fns";
+
+interface PrescriptionReminder {
+  _id: string;
+  medication: string;
+  nextVisitDate: string;
+  doctor: { firstName: string; lastName: string; email: string };
+}
 
 export function PatientReminders() {
-  // Using MongoDB data provided earlier
-  const reminders = [
-    {
-      id: 5001234,
-      medicationName: "Paracetamol",
-      date: "2024-10-10",
-      time: "10:00",
-      notes: "Take with food"
-    },
-    {
-      id: 5001567,
-      medicationName: "Multivitamin",
-      date: "2024-09-25",
-      time: "11:30",
-      notes: "Take after breakfast"
-    },
-    {
-      id: 5001789,
-      medicationName: "Atorvastatin",
-      date: "2024-10-05",
-      time: "09:15",
-      notes: "Take before bedtime"
-    },
-    {
-      id: 5001987,
-      medicationName: "Levothyroxine",
-      date: "2024-08-20",
-      time: "16:00",
-      notes: "Take on empty stomach"
-    }
-  ];
+  const [visits, setVisits] = useState<PrescriptionReminder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchVisits = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) throw new Error("Authentication required");
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/prescriptions/patient`,
+          { headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } }
+        );
+        if (!response.ok) throw new Error("Failed to load reminders");
+        const data: PrescriptionReminder[] = await response.json();
+        const upcoming = data.filter(p => {
+          const date = new Date(p.nextVisitDate);
+          return isAfter(date, new Date()) || isToday(date);
+        });
+        setVisits(upcoming);
+      } catch (error: any) {
+        console.error("Error loading patient reminders:", error);
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchVisits();
+  }, []);
+
+  if (isLoading) {
+    return <div>Loading reminders...</div>;
+  }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-4">Medication Reminders</h2>
-      
-      {reminders.length === 0 ? (
+      <h2 className="text-2xl font-bold mb-4">Upcoming Visits</h2>
+      {visits.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-8 bg-white rounded-lg shadow text-center">
           <Bell className="h-12 w-12 text-gray-400 mb-4" />
-          <p>You have no medication reminders set up.</p>
-          <p className="text-gray-500">Create your first reminder to get started.</p>
+          <p>No upcoming visits scheduled.</p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {reminders.map((reminder) => (
-            <Card key={reminder.id}>
+          {visits.map(vis => (
+            <Card key={vis._id} className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <CardTitle className="text-lg">{reminder.medicationName}</CardTitle>
+                <CardTitle className="text-lg">{format(parseISO(vis.nextVisitDate), 'PPP')}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Date:</span>
-                  <span>{reminder.date}</span>
-                </div>
-                <div className="flex justify-between text-sm mb-1">
-                  <span>Time:</span>
-                  <span>{reminder.time}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Notes:</span>
-                  <span>{reminder.notes}</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Medication:</span>
+                    <span className="font-medium">{vis.medication}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Doctor:</span>
+                    <span className="font-medium">Dr. {vis.doctor.firstName} {vis.doctor.lastName}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Email:</span>
+                    <a href={`mailto:${vis.doctor.email}`} className="text-blue-600 hover:underline">{vis.doctor.email}</a>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -73,3 +85,4 @@ export function PatientReminders() {
     </div>
   );
 }
+

@@ -34,47 +34,50 @@ export function SignupForm() {
     setIsLoading(true);
     
     try {
-      // Get existing users or initialize empty array
-      const existingUsers = JSON.parse(localStorage.getItem("registeredUsers") || "[]");
+      // Register the user using backend API
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          password,
+          role
+        }),
+      });
       
-      // Check if email already exists
-      if (existingUsers.some((user: any) => user.email === email)) {
-        setIsLoading(false);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Registration failed');
+      }
+      
+      setIsLoading(false);
+      toast({
+        title: "Account created successfully",
+        description: "You can now log in with your credentials",
+      });
+      navigate("/login");
+    } catch (error: any) {
+      setIsLoading(false);
+      
+      // Handle specific error for email already in use
+      if (error.message.includes('already exists')) {
         toast({
           title: "Registration failed",
           description: "Email already in use",
           variant: "destructive",
         });
-        return;
-      }
-      
-      // Add new user
-      const newUser = {
-        firstName,
-        lastName,
-        email,
-        password, // In a real app, this should be hashed
-        role
-      };
-      
-      existingUsers.push(newUser);
-      localStorage.setItem("registeredUsers", JSON.stringify(existingUsers));
-      
-      setTimeout(() => {
-        setIsLoading(false);
+      } else {
         toast({
-          title: "Account created successfully",
-          description: "You can now log in with your credentials",
+          title: "Registration failed",
+          description: error.message || "There was an error creating your account",
+          variant: "destructive",
         });
-        navigate("/login");
-      }, 1500);
-    } catch (error) {
-      setIsLoading(false);
-      toast({
-        title: "Registration failed",
-        description: "There was an error creating your account",
-        variant: "destructive",
-      });
+      }
     }
   };
 

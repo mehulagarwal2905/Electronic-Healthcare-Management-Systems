@@ -1,13 +1,18 @@
 
 // ... imports
 import { useState } from "react";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Prescription, updatePatientPrescriptions } from "./prescriptionHelpers";
+import { Prescription, createPrescription } from "./prescriptionHelpers";
 
 interface PrescriptionFormProps {
   onCreate: (presc: Prescription) => void;
@@ -22,11 +27,12 @@ export function PrescriptionForm({ onCreate }: PrescriptionFormProps) {
   const [duration, setDuration] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [nextVisitDate, setNextVisitDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
       !patientName ||
@@ -35,37 +41,44 @@ export function PrescriptionForm({ onCreate }: PrescriptionFormProps) {
       !dosage ||
       !frequency ||
       !duration ||
-      !diagnosis
+      !diagnosis ||
+      !nextVisitDate
     ) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields including next visit date",
         variant: "destructive",
       });
       return;
     }
+    
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const today = new Date().toISOString().split("T")[0];
+    
+    try {
       const newPrescription: Prescription = {
-        id: Number(Date.now()),
         patient: patientName,
         patientEmail: patientEmail,
         medication,
         dosage,
         frequency,
-        issuedDate: today,
         duration,
         diagnosis,
+        instructions,
+        nextVisitDate: nextVisitDate.toISOString().split('T')[0]
       };
-      // Update patient prescriptions
-      updatePatientPrescriptions(newPrescription);
-      onCreate(newPrescription);
+      
+      // Create prescription in the database
+      const createdPrescription = await createPrescription(newPrescription);
+      
+      // Inform parent component
+      onCreate(createdPrescription);
+      
       toast({
         title: "Prescription created",
-        description: "The prescription has been successfully created",
+        description: "The prescription has been successfully saved to the database",
       });
+      
+      // Reset form
       setPatientName("");
       setPatientEmail("");
       setMedication("");
@@ -74,14 +87,27 @@ export function PrescriptionForm({ onCreate }: PrescriptionFormProps) {
       setDuration("");
       setDiagnosis("");
       setInstructions("");
-    }, 1000);
+    } catch (error: any) {
+      toast({
+        title: "Failed to create prescription",
+        description: error.message || "An error occurred while creating the prescription",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Card>
+    <Card className="w-full max-w-3xl mx-auto">
       <form onSubmit={handleSubmit}>
         <CardHeader>
-          <CardTitle>New Prescription</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle>New Prescription</CardTitle>
+            <div className="text-sm text-muted-foreground">
+              Today: {format(new Date(), 'PPP')}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -161,6 +187,32 @@ export function PrescriptionForm({ onCreate }: PrescriptionFormProps) {
               placeholder="Any special instructions for the patient"
               rows={3}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="nextVisitDate">Next Visit Date *</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !nextVisitDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {nextVisitDate ? format(nextVisitDate, 'PPP') : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={nextVisitDate}
+                  onSelect={setNextVisitDate}
+                  initialFocus
+                  disabled={(date) => date < new Date()}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </CardContent>
         <CardFooter>

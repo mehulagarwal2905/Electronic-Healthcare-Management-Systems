@@ -2,28 +2,42 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  loadPrescriptionsFromStorage,
-  savePrescriptionsToStorage,
+  loadPrescriptionsFromAPI,
   Prescription,
 } from "./prescriptionHelpers";
 import { PrescriptionForm } from "./PrescriptionForm";
 import { PrescriptionList } from "./PrescriptionList";
 
 export function DoctorPrescriptions() {
-  const [recentPrescriptions, setRecentPrescriptions] = useState<Prescription[]>(
-    () => loadPrescriptionsFromStorage()
-  );
+  const [recentPrescriptions, setRecentPrescriptions] = useState<Prescription[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Always save to localStorage when prescriptions change
+  // Load prescriptions from API when component mounts
   useEffect(() => {
-    savePrescriptionsToStorage(recentPrescriptions);
-  }, [recentPrescriptions]);
+    async function fetchPrescriptions() {
+      try {
+        setIsLoading(true);
+        const prescriptions = await loadPrescriptionsFromAPI();
+        setRecentPrescriptions(prescriptions);
+      } catch (error) {
+        toast({
+          title: "Failed to load prescriptions",
+          description: "Could not retrieve your prescriptions",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchPrescriptions();
+  }, []);
 
   // Handles new prescription creation
   const handleCreatePrescription = (newPrescription: Prescription) => {
-    const updated = [newPrescription, ...recentPrescriptions];
-    setRecentPrescriptions(updated);
-    savePrescriptionsToStorage(updated);
+    setRecentPrescriptions([newPrescription, ...recentPrescriptions]);
+    // No need to manually save - the API already handled it
   };
 
   return (

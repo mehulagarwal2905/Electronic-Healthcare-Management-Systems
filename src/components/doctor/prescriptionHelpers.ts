@@ -1,20 +1,33 @@
 
+export interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+}
+
 export interface Prescription {
-  id: number;
-  patient: string;
-  patientEmail: string;
+  _id?: string;
+  patient: string | User;
+  patientId?: string;
+  patientEmail?: string;
+  doctor?: string | User;
+  doctorId?: string;
   medication: string;
   dosage: string;
   frequency: string;
-  issuedDate: string;
+  issuedDate?: string;
   duration: string;
+  expiryDate?: string;
+  instructions?: string;
   diagnosis?: string;
+  nextVisitDate?: string;
 }
 
 export function getSamplePrescriptions(): Prescription[] {
   return [
     {
-      id: 1,
+      _id: '1',
       patient: "Alice Johnson",
       patientEmail: "alice@example.com",
       medication: "Amoxicillin",
@@ -25,7 +38,7 @@ export function getSamplePrescriptions(): Prescription[] {
       diagnosis: "Bacterial infection"
     },
     {
-      id: 2,
+      _id: '2',
       patient: "Bob Williams",
       patientEmail: "bob@example.com",
       medication: "Lisinopril",
@@ -39,17 +52,37 @@ export function getSamplePrescriptions(): Prescription[] {
 }
 
 /**
- * Loads prescriptions from localStorage, falling back to sample data.
+ * Loads prescriptions from the backend API
  */
-export function loadPrescriptionsFromStorage(): Prescription[] {
-  const savedPrescriptions = localStorage.getItem("doctorPrescriptions");
-  return savedPrescriptions
-    ? JSON.parse(savedPrescriptions)
-    : getSamplePrescriptions();
-}
-
-export function savePrescriptionsToStorage(prescriptions: Prescription[]) {
-  localStorage.setItem("doctorPrescriptions", JSON.stringify(prescriptions));
+export async function loadPrescriptionsFromAPI(): Promise<Prescription[]> {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      return getSamplePrescriptions();
+    }
+    
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/prescriptions/doctor`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to load prescriptions');
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error loading prescriptions:', error);
+    return getSamplePrescriptions();
+  }
 }
 
 /**
@@ -63,29 +96,112 @@ export function getExpiryDate(issuedDate: string, duration: string) {
 }
 
 /**
- * Update patient prescriptions in localStorage
+ * Create a new prescription via the backend API
  */
-export function updatePatientPrescriptions(prescription: Prescription) {
+export async function createPrescription(prescription: Prescription): Promise<Prescription> {
   try {
-    const doctorStr = localStorage.getItem("user");
-    if (!doctorStr) return;
-    const doctor = JSON.parse(doctorStr);
-    const patientPrescriptionsStr = localStorage.getItem("patientPrescriptions") || "[]";
-    const patientPrescriptions = JSON.parse(patientPrescriptionsStr);
-    const patientPrescription = {
-      id: prescription.id,
-      medication: prescription.medication,
-      dosage: prescription.dosage,
-      frequency: prescription.frequency,
-      issuedBy: `Dr. ${doctor.email.split('@')[0]}`,
-      issuedDate: prescription.issuedDate,
-      expiryDate: getExpiryDate(prescription.issuedDate, prescription.duration),
-      diagnosis: prescription.diagnosis,
-      patientEmail: prescription.patientEmail
-    };
-    patientPrescriptions.unshift(patientPrescription);
-    localStorage.setItem("patientPrescriptions", JSON.stringify(patientPrescriptions));
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    // Calculate expiry date
+    const issuedDate = new Date().toISOString().split('T')[0];
+    const expiryDate = getExpiryDate(issuedDate, prescription.duration);
+    
+    // Find patient ID by email
+    const patientId = await getPatientIdByEmail(prescription.patientEmail || '');
+    
+    const response = await fetch(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/prescriptions`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          patientId,
+          medication: prescription.medication,
+          dosage: prescription.dosage,
+          frequency: prescription.frequency,
+          duration: prescription.duration,
+          instructions: prescription.instructions || prescription.diagnosis,
+          expiryDate,
+          nextVisitDate: prescription.nextVisitDate
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create prescription');
+    }
+    
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error("Error updating patient prescriptions:", error);
+    console.error('Error creating prescription:', error);
+    throw error;
+  }
+}
+
+/**
+ * Helper function to get patient ID by email
+ */
+async function getPatientIdByEmail(email: string): Promise<string> {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+    
+    // Log the URL to ensure it's correct
+    const apiUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/patients/find?email=${encodeURIComponent(email)}`;
+    console.log('Looking up patient with URL:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    // First check if we got a valid content type
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('Invalid content type:', contentType);
+      console.error('Response status:', response.status);
+      // Try to get the response text for debugging
+      const text = await response.text();
+      console.error('Response text:', text.substring(0, 200) + '...');
+      throw new Error('Server did not return JSON. The patient lookup service may be unavailable.');
+    }
+    
+    if (!response.ok) {
+      // We know it's JSON now, so we can parse it safely
+      const errorData = await response.json();
+      if (response.status === 404) {
+        throw new Error(`Patient with email ${email} not found. They must register as a patient first.`);
+      }
+      throw new Error(errorData.message || 'Failed to find patient');
+    }
+    
+    const data = await response.json();
+    if (!data._id) {
+      throw new Error('Patient data is missing ID field');
+    }
+    return data._id;
+  } catch (error: any) {
+    console.error('Error finding patient:', error);
+    
+    // Provide a clear message for common errors
+    if (error.message.includes('<!DOCTYPE')) {
+      throw new Error('Connection to server failed. Please try again or contact support.');
+    }
+    if (error.message.includes('not found')) {
+      throw new Error(`Patient with email ${email} not found. They must register as a patient first.`);
+    }
+    throw new Error(error.message || 'Could not find patient with that email');
   }
 }

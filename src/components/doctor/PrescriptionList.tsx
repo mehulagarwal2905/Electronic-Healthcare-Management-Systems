@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Prescription } from "./prescriptionHelpers";
+import { Prescription, User } from "./prescriptionHelpers";
 
 interface PrescriptionListProps {
   prescriptions: Prescription[];
@@ -10,7 +10,7 @@ export function PrescriptionList({ prescriptions }: PrescriptionListProps) {
   return (
     <div className="grid gap-4">
       {prescriptions.map((prescription) => (
-        <Card key={prescription.id}>
+        <Card key={prescription._id}>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg flex justify-between">
               <span>
@@ -26,7 +26,9 @@ export function PrescriptionList({ prescriptions }: PrescriptionListProps) {
               <div className="flex justify-between">
                 <span className="text-sm text-gray-500">Patient:</span>
                 <span className="text-sm font-medium">
-                  {prescription.patient}
+                  {typeof prescription.patient === 'object' && prescription.patient ? 
+                    `${(prescription.patient as User).firstName || ''} ${(prescription.patient as User).lastName || ''}`.trim() : 
+                    (prescription.patient as string) || 'Unknown Patient'}
                 </span>
               </div>
               <div className="flex justify-between">
