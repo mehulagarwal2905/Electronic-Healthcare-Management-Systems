@@ -2,7 +2,7 @@
 // ... imports
 import { useState } from "react";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, FileImage, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -11,8 +11,10 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Prescription, createPrescription } from "./prescriptionHelpers";
+import { PrescriptionOCR } from "./PrescriptionOCR";
 
 interface PrescriptionFormProps {
   onCreate: (presc: Prescription) => void;
@@ -98,17 +100,47 @@ export function PrescriptionForm({ onCreate }: PrescriptionFormProps) {
     }
   };
 
+  const handleOCRComplete = (result: any) => {
+    // Auto-fill form with OCR data if confidence is high
+    if (result.overallConfidence > 0.7) {
+      if (result.extractedData.patient) setPatientName(result.extractedData.patient);
+      if (result.extractedData.medication) setMedication(result.extractedData.medication);
+      if (result.extractedData.dosage) setDosage(result.extractedData.dosage);
+      if (result.extractedData.frequency) setFrequency(result.extractedData.frequency);
+      if (result.extractedData.duration) setDuration(result.extractedData.duration);
+      if (result.extractedData.instructions) setInstructions(result.extractedData.instructions);
+    }
+  };
+
+  const handleOCRPrescriptionCreate = (prescription: any) => {
+    onCreate(prescription);
+  };
+
   return (
-    <Card className="w-full max-w-3xl mx-auto">
-      <form onSubmit={handleSubmit}>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>New Prescription</CardTitle>
-            <div className="text-sm text-muted-foreground">
-              Today: {format(new Date(), 'PPP')}
-            </div>
+    <Card className="w-full max-w-4xl mx-auto">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle>New Prescription</CardTitle>
+          <div className="text-sm text-muted-foreground">
+            Today: {format(new Date(), 'PPP')}
           </div>
-        </CardHeader>
+        </div>
+      </CardHeader>
+      
+      <Tabs defaultValue="manual" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="manual" className="flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            Manual Entry
+          </TabsTrigger>
+          <TabsTrigger value="ocr" className="flex items-center gap-2">
+            <FileImage className="h-4 w-4" />
+            OCR Scanner
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="manual" className="space-y-0">
+          <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="patient">Patient Name</Label>
@@ -215,16 +247,27 @@ export function PrescriptionForm({ onCreate }: PrescriptionFormProps) {
             </Popover>
           </div>
         </CardContent>
-        <CardFooter>
-          <Button
-            type="submit"
-            className="bg-medconnect-primary hover:bg-medconnect-secondary ml-auto"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Creating..." : "Create Prescription"}
-          </Button>
-        </CardFooter>
-      </form>
+            <CardFooter>
+              <Button
+                type="submit"
+                className="bg-medconnect-primary hover:bg-medconnect-secondary ml-auto"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Creating..." : "Create Prescription"}
+              </Button>
+            </CardFooter>
+          </form>
+        </TabsContent>
+        
+        <TabsContent value="ocr" className="space-y-0">
+          <CardContent>
+            <PrescriptionOCR 
+              onOCRComplete={handleOCRComplete}
+              onPrescriptionCreate={handleOCRPrescriptionCreate}
+            />
+          </CardContent>
+        </TabsContent>
+      </Tabs>
     </Card>
   );
 }

@@ -41,6 +41,43 @@ const PrescriptionSchema = new mongoose.Schema({
   nextVisitDate: {
     type: Date,
     required: true
+  },
+  // OCR-related fields
+  ocrData: {
+    extractedData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+    },
+    confidenceScores: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {}
+    },
+    overallConfidence: {
+      type: Number,
+      default: 0
+    },
+    needsReview: {
+      type: Boolean,
+      default: false
+    },
+    rawOutput: {
+      type: String,
+      default: ''
+    },
+    imagePath: {
+      type: String,
+      default: ''
+    },
+    processedAt: {
+      type: Date,
+      default: Date.now
+    }
+  },
+  // Source of prescription data
+  source: {
+    type: String,
+    enum: ['manual', 'ocr', 'imported'],
+    default: 'manual'
   }
 });
 

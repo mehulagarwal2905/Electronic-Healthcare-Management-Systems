@@ -1,6 +1,10 @@
 import Prescription from '../models/Prescription.js';
 import User from '../models/User.js';
 import mongoose from 'mongoose';
+import FormData from 'form-data';
+import fs from 'fs';
+import axios from 'axios';
+import sharp from 'sharp';
 
 // @desc    Create a new prescription
 // @route   POST /api/prescriptions
@@ -226,4 +230,207 @@ const getPrescriptionById = async (req, res) => {
   }
 };
 
-export { createPrescription, getMyPrescriptions, getPrescriptionsByDoctor, getPrescriptionById };
+// @desc    Process prescription image with OCR
+// @route   POST /api/prescriptions/ocr
+// @access  Private/Doctor
+const processPrescriptionOCR = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file provided' });
+    }
+
+    const doctorId = req.user._id;
+
+    // Verify doctor exists and is a doctor
+    const doctor = await User.findById(doctorId);
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(403).json({ message: 'Doctor not authorized' });
+    }
+
+    // Call OCR service
+
+    const formData = new FormData();
+    // Pre-resize/compress to speed up OCR service and reduce timeout risk
+    try {
+      const inputBuffer = fs.readFileSync(req.file.path);
+      const processedBuffer = await sharp(inputBuffer)
+        .resize({
+          width: 1600,
+          height: 1600,
+          fit: 'inside',
+          withoutEnlargement: true
+        })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+      formData.append('image', processedBuffer, {
+        filename: 'upload.jpg',
+        contentType: 'image/jpeg'
+      });
+    } catch (imgErr) {
+      // Fallback to raw stream if processing fails
+      formData.append('image', fs.createReadStream(req.file.path));
+    }
+
+    const ocrResponse = await axios.post(
+      'http://localhost:5001/extract-prescription',
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        timeout: 180000
+      }
+    );
+
+    if (ocrResponse.data.success) {
+      res.json({
+        success: true,
+        extractedData: ocrResponse.data.extracted_data,
+        confidenceScores: ocrResponse.data.confidence_scores,
+        overallConfidence: ocrResponse.data.overall_confidence,
+        needsReview: ocrResponse.data.needs_review,
+        rawOutput: ocrResponse.data.raw_output
+      });
+    } else {
+      res.status(500).json({ 
+        message: 'OCR processing failed',
+        error: ocrResponse.data.error 
+      });
+    }
+
+    // Clean up uploaded file
+    fs.unlinkSync(req.file.path);
+
+  } catch (error) {
+    console.error('OCR Processing Error:', error);
+    
+    // Clean up uploaded file if it exists
+    if (req.file && req.file.path) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.error('Error cleaning up file:', cleanupError);
+      }
+    }
+    
+    res.status(500).json({ 
+      message: 'Failed to process prescription image',
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Create prescription from OCR data
+// @route   POST /api/prescriptions/from-ocr
+// @access  Private/Doctor
+const createPrescriptionFromOCR = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
+  try {
+    const {
+      patientId,
+      patientEmail,
+      ocrData,
+      extractedData,
+      confidenceScores,
+      overallConfidence,
+      needsReview,
+      rawOutput,
+      imagePath
+    } = req.body;
+
+    const doctorId = req.user._id;
+
+    // Resolve patient by email if provided, else by id
+    let patient = null;
+    if (patientEmail) {
+      patient = await User.findOne({ email: patientEmail }).session(session);
+      if (!patient) {
+        await session.abortTransaction();
+        return res.status(404).json({ message: 'Patient email not found' });
+      }
+    } else if (patientId) {
+      patient = await User.findById(patientId).session(session);
+    }
+
+    // Verify patient exists and is a patient
+    if (!patient || patient.role !== 'patient') {
+      await session.abortTransaction();
+      return res.status(404).json({ message: 'Patient not found' });
+    }
+
+    // Verify doctor exists and is a doctor
+    const doctor = await User.findById(doctorId).session(session);
+    if (!doctor || doctor.role !== 'doctor') {
+      await session.abortTransaction();
+      return res.status(403).json({ message: 'Doctor not authorized' });
+    }
+
+    // Create prescription with OCR data
+    const prescriptionData = {
+      patient: patient._id,
+      doctor: doctorId,
+      medication: extractedData.medication || '',
+      dosage: extractedData.dosage || '',
+      frequency: extractedData.frequency || '',
+      duration: extractedData.duration || '',
+      instructions: extractedData.instructions || '',
+      expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+      nextVisitDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      ocrData: {
+        // store both original and edited values if provided by client later
+        originalExtracted: req.body.originalExtracted || null,
+        extractedData: extractedData || {},
+        editedDiff: req.body.editedDiff || null,
+        confidenceScores: confidenceScores || {},
+        overallConfidence: overallConfidence || 0,
+        needsReview: needsReview || false,
+        rawOutput: rawOutput || '',
+        imagePath: imagePath || '',
+        processedAt: new Date()
+      },
+      source: 'ocr'
+    };
+    
+    const prescription = await Prescription.create([prescriptionData], { session });
+
+    // Update doctor-patient relationships
+    if (!doctor.myPatients.includes(patient._id)) {
+      doctor.myPatients.push(patient._id);
+      await doctor.save({ session });
+    }
+
+    if (!patient.myDoctors.includes(doctorId)) {
+      patient.myDoctors.push(doctorId);
+      await patient.save({ session });
+    }
+
+    await session.commitTransaction();
+    
+    res.status(201).json({
+      _id: prescription[0]._id,
+      patient: prescription[0].patient,
+      doctor: prescription[0].doctor,
+      medication: prescription[0].medication,
+      dosage: prescription[0].dosage,
+      frequency: prescription[0].frequency,
+      duration: prescription[0].duration,
+      issuedDate: prescription[0].issuedDate,
+      nextVisitDate: prescription[0].nextVisitDate,
+      ocrData: prescription[0].ocrData,
+      source: prescription[0].source
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('OCR Prescription Creation Error:', error);
+    res.status(500).json({ 
+      message: 'Failed to create prescription from OCR data',
+      error: error.message 
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
+export { createPrescription, getMyPrescriptions, getPrescriptionsByDoctor, getPrescriptionById, processPrescriptionOCR, createPrescriptionFromOCR };

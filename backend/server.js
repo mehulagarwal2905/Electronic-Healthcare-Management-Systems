@@ -21,6 +21,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
+
 // Routes
 app.get('/', (req, res) => {
   res.send('API is running...');
@@ -34,8 +37,8 @@ app.use('/api/prescriptions', prescriptionRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/test', testRoutes);
 
-// Try port 5001 if 5000 is in use
-const PORT = process.env.PORT || 5001;
+// Use port 5000 for backend, OCR service uses 5001
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running in development mode on port ${PORT}`);

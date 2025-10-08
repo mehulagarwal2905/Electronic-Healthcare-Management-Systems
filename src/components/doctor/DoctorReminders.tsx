@@ -30,7 +30,7 @@ export function DoctorReminders() {
         }
 
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/api/prescriptions/doctor`,
+          `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/prescriptions/doctor`,
           {
             headers: {
               'Authorization': `Bearer ${token}`,
